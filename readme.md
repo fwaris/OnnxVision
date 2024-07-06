@@ -1,4 +1,4 @@
-# ONN Vision
+# ONNX Vision
 Web app and service for performing vision processing with ONNX-based vision (multi-modal) models.
 
 Test with Phi-3 Vision.
