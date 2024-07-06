@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="scripts\TestService.fsx" />
     <Compile Include="VisionService.fs" />
     <Compile Include="Index.fs" />
     <Compile Include="Startup.fs" />
@@ -18,4 +19,5 @@
     <PackageReference Include="NtvLibs.zlib.zlibwapi.runtime.win-x64" Version="1.2.3" />
     <PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI.Cuda" Version="0.3.0" />
   </ItemGroup>
+  <ItemGroup />
 </Project>

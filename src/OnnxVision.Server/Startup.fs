@@ -11,6 +11,7 @@ open Bolero.Remoting.Server
 open Bolero.Server
 open OnnxVision
 open Bolero.Templating.Server
+open Microsoft.AspNetCore.HttpLogging
 
 type Startup() =
 
@@ -21,6 +22,10 @@ type Startup() =
         services.AddServerSideBlazor() |> ignore
         services
             .AddLogging()
+            // .AddHttpLogging(fun o -> 
+            //     o.LoggingFields <- HttpLoggingFields.All
+            //     o.RequestBodyLogLimit <- 100000
+            //     o.ResponseBodyLogLimit <- 100000)
             .AddAuthorization()
             .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie()
@@ -38,6 +43,7 @@ type Startup() =
             app.UseWebAssemblyDebugging()
 
         app
+            //.UseHttpLogging()
             .UseAuthentication()
             .UseStaticFiles()
             .UseRouting()
@@ -49,7 +55,7 @@ type Startup() =
 #endif
                 endpoints.MapBoleroRemoting() |> ignore
                 endpoints.MapBlazorHub() |> ignore
-                endpoints.MapFallbackToBolero(Index.page) |> ignore)
+                endpoints.MapFallbackToBolero(Index.page) |> ignore)     
         |> ignore
 
 module Program =
@@ -57,7 +63,7 @@ module Program =
     [<EntryPoint>]
     let main args =
         WebHost
-            .CreateDefaultBuilder(args)
+            .CreateDefaultBuilder(args)            
             .UseStaticWebAssets()
             .UseStartup<Startup>()
             .Build()
