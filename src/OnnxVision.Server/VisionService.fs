@@ -96,8 +96,12 @@ module Vision =
             | Dispose -> 
                 model.Dispose() //end loop
         }
-        loop (new Model(path)))
-
+        let model = 
+            try new Model(path) 
+            with ex -> 
+                logger.LogError(ex, $"Unable to load model from configured path in appSettings.json `{path}`"); 
+                raise ex
+        loop model)      
     let routerAgent (logger:ILogger<VisionRequest>) (config:VisionConfig) = 
         MailboxProcessor.Start(fun inbox ->        
             let rec loop (agents:List<MailboxProcessor<VisionMsg>>,i) = async {
