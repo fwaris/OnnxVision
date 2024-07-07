@@ -16,6 +16,11 @@ Test with Phi-3 Vision.
     - Only tested on windows
     - Should be possible to run on Linux with minor updates
 
+## Configuration
+The application needs two configured values from appSettings.json
+- **ModelPath**: Directory that contains the Onnx vision model
+- **ModelInstanceCount**: The number of model instances to load in the GPU. The system will be able to handle that many concurrent requests. The instance count depends on the size of the GPU.
+
 ## Usage
 ```
 git clone <repo url>
@@ -28,11 +33,8 @@ open browser to http://localhost:5045<p>(or whatever is configured in (server ro
 Enter a prompt; select an image and click on Infer. Note first time may be slow as the model is loaded into GPU memory.
 Use Ctr-c to exit the application and release the GPU memory.
 
-## Configuration
-The application needs two configured values from appSettings.json
-- ModelPath: Directory that contains the Onnx vision model
-- ModelInstanceCount: The number of model instances to load in the GPU. The system will be able to handle that many concurrent requests. The instance count depends on the size of the GPU.
 
 ## Service / batch usage
 - [TestService.fsx](src/OnnxVision.Server/scripts/TestService.fsx) shows how the vision service can be called via http, for a single image.
-- [TestBatch.fsx](src/OnnxVision.Server/scripts/TestBatch.fsx) shows how process a batch of images in parallel using throttled calls. Note for 
+- [TestBatch.fsx](src/OnnxVision.Server/scripts/TestBatch.fsx) shows how process a batch of images in parallel using throttled calls.
+    - In a test run about 1000 images were processed in 3 minutes using 4 model instances on an nVidia A100 GPU
