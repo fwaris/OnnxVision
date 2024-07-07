@@ -4,7 +4,7 @@ open System.Diagnostics
 open FSharp.Control
 open AsyncExts
 
-let PARELLISM = 6 // number of parallel requests which equals the number of models loaded into gpu
+let PARELLISM = 4 // number of parallel requests which equals the number of models loaded into gpu
 
 let url = "http://localhost:5045/vision/infer"
 
@@ -18,7 +18,7 @@ printfn "Found %d images" imageFiles.Length
 let systemMessage = "You are an AI assistant that helps people find information. Answer questions using a direct style. Do not share more information that the requested by the users."
 let userPrompt = "Is the image a technical drawing or does it contain tabular data? Answer with 'yes' or 'no' only."
 
-let testRespose = Client.processImage url (systemMessage,userPrompt,File.ReadAllBytes(imageFiles.[0])) |> Async.RunSynchronously
+let testResponse = Client.processImage url (systemMessage,userPrompt,File.ReadAllBytes(imageFiles.[0])) |> Async.RunSynchronously
 
 let timer = Stopwatch()
 timer.Start()
