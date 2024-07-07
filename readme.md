@@ -34,4 +34,5 @@ The application needs two configured values from appSettings.json
 - ModelInstanceCount: The number of model instances to load in the GPU. The system will be able to handle that many concurrent requests. The instance count depends on the size of the GPU.
 
 ## Service / batch usage
-The [TestServic.fsx](src/OnnxVision.Server/scripts/TestService.fsx) shows how the vision service can be called via http, for batch processing.
+- [TestService.fsx](src/OnnxVision.Server/scripts/TestService.fsx) shows how the vision service can be called via http, for a single image.
+- [TestBatch.fsx](src/OnnxVision.Server/scripts/TestBatch.fsx) shows how process a batch of images in parallel using throttled calls. Note for 

@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AsyncExt.fs" />
     <None Include="scripts\TestService.fsx" />
     <Compile Include="VisionService.fs" />
     <Compile Include="Index.fs" />
@@ -18,6 +19,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.*" />
     <PackageReference Include="NtvLibs.zlib.zlibwapi.runtime.win-x64" Version="1.2.3" />
     <PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI.Cuda" Version="0.3.0" />
+    <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.1" />
   </ItemGroup>
   <ItemGroup />
 </Project>

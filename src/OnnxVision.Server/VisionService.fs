@@ -108,8 +108,8 @@ module Vision =
                 let! (msg:VisionMsg) = inbox.Receive()
                 match msg with
                 | VisionRequest req ->
+                    let i = (i + 1) % config.ModelInstanceCount
                     try
-                        let i = i + 1 % config.ModelInstanceCount
                         let agent = agents.[i]
                         agent.Post msg                    
                     with ex -> 
