@@ -48,5 +48,5 @@ let results =
     |> AsyncSeq.toBlockingSeq
     |> Seq.toList
 timer.Stop()
-printfn $"{imageFiles.Length} images processed in {timer.Elapsed}"
+printfn $"{imageFiles.Length} images processed in {timer.Elapsed} [hh:mm:ss.fff]"
 
