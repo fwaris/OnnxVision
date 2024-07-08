@@ -124,5 +124,5 @@ module AsyncSeq =
 
     ///Invoke f in parallel while maintaining opsPerSecond rate.
     ///Note: ordering is not maintained
-let mapAsyncParallelRateLimit (opsPerSecond:float) (f:'a -> Async<'b>) (s:AsyncSeq<'a>) : AsyncSeq<'b> = 
-    AsyncSeq.mapAsyncParallelTokenLimit (opsPerSecond * 60.0) f (s |> AsyncSeq.map (fun a -> 1UL,a))
+    let mapAsyncParallelRateLimit (opsPerSecond:float) (f:'a -> Async<'b>) (s:AsyncSeq<'a>) : AsyncSeq<'b> =
+        mapAsyncParallelTokenLimit (opsPerSecond * 60.0) f (s |> AsyncSeq.map (fun a -> 1UL,a))

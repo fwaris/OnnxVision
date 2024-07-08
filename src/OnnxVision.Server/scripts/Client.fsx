@@ -1,5 +1,7 @@
 #r "nuget: FSharp.SystemTextJson"
 #r "nuget: FSharp.Control.AsyncSeq"
+#r "nuget: Plotly.NET"
+
 #load "../AsyncExt.fs"
 
 open System

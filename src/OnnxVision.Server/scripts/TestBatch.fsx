@@ -3,6 +3,8 @@ open System.IO
 open System.Diagnostics
 open FSharp.Control
 open AsyncExts
+open Plotly.NET
+open Plotly.NET.LayoutObjects
 
 let PARELLISM = 4 // number of parallel requests which equals the number of models loaded into gpu
 
@@ -14,6 +16,19 @@ let imageFiles =
     |>Array.filter(fun f -> FileInfo(f).Length > 1024L) //ignore very small images
 printfn "Found %d images" imageFiles.Length
 
+let plotImageSzDist() = 
+    imageFiles 
+    |> Array.map(FileInfo) 
+    |> Array.map (fun x -> min x.Length 100000L) 
+    |> Chart.BoxPlot
+    |> Chart.withTraceInfo "bytes"
+    |> Chart.withXAxisStyle(TitleText="Image size (bytes)", ShowLine=true)
+    |> Chart.withSize(800.,800.)
+    |> Chart.withTitle "Image size distribution" 
+    |> Chart.show
+(*
+plotImageSzDist()
+*)
 
 let systemMessage = "You are an AI assistant that helps people find information. Answer questions using a direct style. Do not share more information that the requested by the users."
 let userPrompt = "Is the image a technical drawing or does it contain tabular data? Answer with 'yes' or 'no' only."
