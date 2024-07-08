@@ -3,7 +3,7 @@ Web app and service for performing vision processing with ONNX-based vision (mul
 
 [write-up](https://www.linkedin.com/pulse/phi-3-vision-surprisingly-useful-gem-faisal-waris-sxuqc/)
 
-Test with Phi-3 Vision.
+Tested with Phi-3 Vision.
 
 ## System Requirements
 - GPU hardware - specific requirements depend on the vision model used
