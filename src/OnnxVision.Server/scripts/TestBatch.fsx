@@ -34,19 +34,25 @@ let systemMessage = "You are an AI assistant that helps people find information.
 let userPrompt = "Is the image a technical drawing or does it contain tabular data? Answer with 'yes' or 'no' only."
 
 let testResponse = Client.processImage url (systemMessage,userPrompt,File.ReadAllBytes(imageFiles.[0])) |> Async.RunSynchronously
-
+;;
 let timer = Stopwatch()
 timer.Start()
 let results =
     imageFiles
+    |> Seq.indexed
     |> AsyncSeq.ofSeq
-    |> AsyncSeq.mapAsyncParallelThrottled PARELLISM (fun path -> async {
+    |> AsyncSeq.mapAsyncParallelThrottled PARELLISM (fun (i,path) -> async {
         let img = File.ReadAllBytes(path)
+        let t1 = Stopwatch()
+        t1.Start()
         let! response = Client.processImage url (systemMessage, userPrompt, img) 
+        t1.Stop()
+        printfn $"Processed {i}/{imageFiles.Length} {path} in {t1.Elapsed.TotalSeconds} sec with response {response}"
         return (path,response)
         })
     |> AsyncSeq.toBlockingSeq
     |> Seq.toList
 timer.Stop()
-printfn $"{imageFiles.Length} images processed in {timer.Elapsed} [hh:mm:ss.fff]"
+printfn $"{imageFiles.Length} images processed in {timer.Elapsed.TotalMinutes} min"
 
+results |> Seq.map snd |> Seq.map(fun x -> x.Trim().ToLower()) |> Seq.filter (fun x -> x = "yes") |> Seq.length 
