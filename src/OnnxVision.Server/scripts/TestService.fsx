@@ -9,3 +9,19 @@ let userPrompt = "Describe the image in detail"
 
 let response = Client.processImage url (systemMessage, userPrompt, img) |> Async.RunSynchronously
 
+open FSharp.Control
+open AsyncExts
+
+
+let inputsWithTokensEstimates : AsyncSeq<(uint64*string)> = AsyncSeq.ofSeq []
+let llmCallAsync (x:string) = async {return ""} //call llm
+
+
+
+
+inputsWithTokensEstimates 
+|> AsyncSeq.mapAsyncParallelTokenLimit 50000 llmCallAsync
+|> AsyncSeq.toBlockingSeq
+
+
+
