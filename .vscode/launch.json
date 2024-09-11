@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "launchSettingsFilePath": "${workspaceFolder}/srcOnnxVision.Server/Properties/launchSettings.json",
+            "launchSettingsFilePath": "${workspaceFolder}/src/OnnxVision.Server/Properties/launchSettings.json",
             "launchSettingsProfile": "https",
             "program": "${workspaceFolder}/src/OnnxVision.Server/bin/Debug/net8.0/OnnxVision.Server.dll",
             "args": [],
