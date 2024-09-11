@@ -8,6 +8,7 @@ open Bolero.Remoting
 open Bolero.Remoting.Client
 open Bolero.Templating.Client
 open Microsoft.AspNetCore.Components.Forms
+open FSharp.Control
 
 /// Routing endpoints definition.
 type Page =
@@ -48,6 +49,7 @@ let initModel =
 type VisionService =
     {
         infer: string*string*byte[] -> Async<string> //system message, user prompt, image -> response
+        infer2: string*string*byte[] -> Async<AsyncSeq<string>> //system message, user prompt, image -> response
     }
     interface IRemoteService with
         member this.BasePath = "/vision"
@@ -63,5 +65,5 @@ type Message =
     | Infer
     | Error of exn
     | ClearError
-    | Loading of string 
+    | Loading of string
 

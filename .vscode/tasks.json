@@ -1,0 +1,22 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"build",
+				"OnnxVision.sln"
+			],
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"label": "build",
+			"detail": "Build the OnnxVision.sln solution using dotnet build"
+		}
+	]
+}

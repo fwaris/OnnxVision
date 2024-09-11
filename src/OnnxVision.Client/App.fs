@@ -9,7 +9,7 @@ open OnnxVision.Client.View.Main
 type MyApp() =
     inherit ProgramComponent<Model, Message>()
 
-    override _.CssScope = CssScopes.MyApp
+   // override _.CssScope = CssScopes.MyApp
 
     override this.Program =
         let visionService = this.Remote<VisionService>()

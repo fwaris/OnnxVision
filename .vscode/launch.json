@@ -1,0 +1,30 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Fast Client - Debug Server",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "launchSettingsFilePath": "${workspaceFolder}/srcOnnxVision.Server/Properties/launchSettings.json",
+            "launchSettingsProfile": "https",
+            "program": "${workspaceFolder}/src/OnnxVision.Server/bin/Debug/net8.0/OnnxVision.Server.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/OnnxVision.Server",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        }
+    ]
+}

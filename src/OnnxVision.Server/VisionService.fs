@@ -29,6 +29,7 @@ type VisionRequest = {
 
 type VisionMsg =
     | VisionRequest of VisionRequest
+    | Model of (AsyncReplyChannel<Model>)
     | Dispose
 
 [<AutoOpen>]
@@ -46,6 +47,7 @@ module VisionInit =
             ()
 
 module Vision =
+    open FSharp.Control
 
     let fullPrompt systemMessage userPrompt =
         if systemMessage = "" then
@@ -74,9 +76,39 @@ module Vision =
                         let word =
                             let ra =generator.GetSequence(0uL)
                             ra.[(ra.Length-1)]
-                        yield tokenizerStream.Decode(word)
+                        let decoded = tokenizerStream.Decode(word)
+                        printfn "%s" decoded
+                        yield decoded
                 }
                 |> String.concat ""
+            return resp
+        }
+
+    let infer2 (model:Model) (prompt:string) (image:byte[]) =
+        async {
+            let imagePath = Path.GetTempFileName()
+            File.WriteAllBytes(imagePath, image)
+            use img = Images.Load(imagePath)
+            use processor = new MultiModalProcessor(model);
+            use tokenizerStream = processor.CreateStream();
+            use inputTensors = processor.ProcessImages(prompt, img)
+            File.Delete(imagePath)
+            use generatorParams = new GeneratorParams(model)
+            generatorParams.SetSearchOption("max_length", 3027)
+            generatorParams.SetInputs(inputTensors)
+            let resp =
+                asyncSeq {
+                    use generator = new Generator(model, generatorParams)
+                    while not(generator.IsDone()) do
+                        generator.ComputeLogits()
+                        generator.GenerateNextToken()
+                        let word =
+                            let ra =generator.GetSequence(0uL)
+                            ra.[(ra.Length-1)]
+                        let decoded = tokenizerStream.Decode(word)
+                        printfn "%s" decoded
+                        yield decoded
+                }
             return resp
         }
 
@@ -94,6 +126,9 @@ module Vision =
                 with ex ->
                     logger.LogError(ex, "Error: %s", ex.Message)
                     req.ReplyChannel.Reply(ex.Message)
+                return! loop model
+            | Model rc ->
+                rc.Reply(model)
                 return! loop model
             | Dispose ->
                 model.Dispose() //end loop
@@ -120,6 +155,7 @@ module Vision =
                         logger.LogError(ex, "Error: %s", ex.Message)
                         req.ReplyChannel.Reply(ex.Message)
                     return! loop (agents,i)
+                | Model _ -> failwith "Model request not valid for this router"
                 | Dispose ->
                     agents |> List.iter (fun a -> a.Post Dispose)
             }
@@ -162,6 +198,16 @@ type VisionService(ctx: IRemoteContext, env: IWebHostEnvironment, cfg:IConfigura
                                     ReplyChannel=rc
                                 })
                     return resp
+                with ex ->
+                    logger.LogError(ex, "Error: %s", ex.Message)
+                    return raise ex
+            }
+
+            infer2 = fun (sysMsg:string,userPrompt:string,image:byte[]) -> async {
+                try
+                    let! model = Vision.router.PostAndAsyncReply(fun rc -> Model rc)
+                    let prompt = Vision.fullPrompt sysMsg userPrompt
+                    return! Vision.infer2 model prompt image
                 with ex ->
                     logger.LogError(ex, "Error: %s", ex.Message)
                     return raise ex
