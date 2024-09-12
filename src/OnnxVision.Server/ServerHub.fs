@@ -23,12 +23,17 @@ type ServerHub() =
                 match msg with
                 | Clnt_InferImage (sysMsg,userPrompt,imageBytes) ->
                     let prompt = Vision.fullPrompt sysMsg userPrompt
-                    let vc (rc) = VisionRequest {SystemPrompt=sysMsg;Prompt=prompt;Image=imageBytes;ReplyChannel=rc}
-                    let! data = Vision.router.PostAndAsyncReply vc
-                    do! Vision.dispatchResponse dispatch data 
-                    dispatch (Srv_Notify "success")
+                    let vc (rc) = 
+                        VisionRequest 
+                            {
+                                SystemPrompt=sysMsg
+                                Prompt=prompt
+                                Image=imageBytes
+                                ReplyChannel=rc
+                                Dispatch=dispatch
+                            }
+                    do! Vision.router.PostAndAsyncReply vc
             with ex -> 
                 printfn "%s" ex.Message
                 dispatch (Srv_Notify $"error {ex.Message}")
-                
         }

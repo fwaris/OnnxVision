@@ -24,7 +24,7 @@ let startInfer (serverDispatch, model) =
         model,Cmd.ofMsg (Exn ex)
 
 let addChunk model chunk = 
-    {model with response = model.response |> Option.map(fun r -> r + chunk) }
+    {model with response = match model.response with Some x -> Some (x + chunk) | None -> Some chunk}
 
 let finishReponse model msg = 
     {model with isInferring=false; endInferTime = DateTime.Now},

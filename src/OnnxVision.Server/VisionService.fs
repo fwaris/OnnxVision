@@ -16,7 +16,7 @@ open Bolero.Remoting.Server
 open OnnxVision
 open Microsoft.Extensions.Hosting
 open System.Threading.Tasks
-//open OnnxVision.Client.Model
+open OnnxVision.Client
 
 type VisionConfig =
     {
@@ -28,7 +28,8 @@ type VisionRequest = {
     SystemPrompt:string
     Prompt:string
     Image:byte[];
-    ReplyChannel:AsyncReplyChannel<AsyncSeq<string>>
+    ReplyChannel:AsyncReplyChannel<unit>
+    Dispatch:Model.ServerInitiatedMessages -> unit
 }
 
 type VisionMsg =
@@ -51,7 +52,6 @@ module VisionInit =
             ()
 
 module Vision =
-    open FSharp.Control
 
     let fullPrompt systemMessage userPrompt =
         if systemMessage = "" then
@@ -59,11 +59,25 @@ module Vision =
         else
             $"<|system|>{systemMessage}<|end|><|user|><|image_1|>{userPrompt}<|end|><|assistant|>"
 
-    let infer (model:Model) (prompt:string) (image:byte[]) =
+    let dispatchResponse dispatch (data:AsyncSeq<string>) =
+        async {
+            let comp = 
+                data
+                    |> AsyncSeq.bufferByCountAndTime 10 1000
+                    |> AsyncSeq.map (fun xs -> if xs.Length > 0 then String.concat "" xs else "")
+                    |> AsyncSeq.iter(Client.Model.Srv_TextChunk>>dispatch)
+            match! Async.Catch comp with
+            | Choice1Of2 _ -> dispatch (Client.Model.Srv_TextDone(None))
+            | Choice2Of2 ex ->
+                printfn "%s" ex.Message
+                dispatch (Client.Model.Srv_TextDone(Some ex.Message))        
+        }
+
+    let infer (model:Model) (prompt:string) (image:byte[]) dispatch =
         async {
             let imagePath = Path.GetTempFileName()
             File.WriteAllBytes(imagePath, image)
-            return
+            let data =
                 asyncSeq {
                     use img = Images.Load(imagePath)
                     use processor = new MultiModalProcessor(model);
@@ -81,58 +95,10 @@ module Vision =
                             let ra =generator.GetSequence(0uL)
                             ra.[(ra.Length-1)]
                         let decoded = tokenizerStream.Decode(word)
-                        printfn "%s" decoded
+                        //printfn "%s" decoded
                         yield decoded
                 }
-        }
-
-    let infer2 (model:Model) (prompt:string) (image:byte[]) (dispatch:Client.Model.ServerInitiatedMessages -> unit) =
-        async {
-            let imagePath = Path.GetTempFileName()
-            File.WriteAllBytes(imagePath, image)
-            use img = Images.Load(imagePath)
-            use processor = new MultiModalProcessor(model);
-            use tokenizerStream = processor.CreateStream();
-            use inputTensors = processor.ProcessImages(prompt, img)
-            File.Delete(imagePath)
-            use generatorParams = new GeneratorParams(model)
-            generatorParams.SetSearchOption("max_length", 3027)
-            generatorParams.SetInputs(inputTensors)
-            let comp =
-                asyncSeq {
-                    use generator = new Generator(model, generatorParams)
-                    while not(generator.IsDone()) do
-                        generator.ComputeLogits()
-                        generator.GenerateNextToken()
-                        let word =
-                            let ra =generator.GetSequence(0uL)
-                            ra.[(ra.Length-1)]
-                        let decoded = tokenizerStream.Decode(word)
-                        printfn "%s" decoded
-                        yield decoded
-                }
-                |> AsyncSeq.bufferByCountAndTime 10 1000
-                |> AsyncSeq.map (fun xs -> if xs.Length > 0 then String.concat "" xs else "")
-                |> AsyncSeq.iter(Client.Model.Srv_TextChunk>>dispatch)
-           match! Async.Catch comp with
-            | Choice1Of2 _ -> dispatch (Client.Model.Srv_TextDone(None))
-            | Choice2Of2 ex ->
-                printfn "%s" ex.Message
-                dispatch (Client.Model.Srv_TextDone(Some ex.Message))        
-        }
-
-    let dispatchResponse dispatch (data:AsyncSeq<string>) =
-        async {
-            let comp = 
-                data
-                    |> AsyncSeq.bufferByCountAndTime 10 1000
-                    |> AsyncSeq.map (fun xs -> if xs.Length > 0 then String.concat "" xs else "")
-                    |> AsyncSeq.iter(Client.Model.Srv_TextChunk>>dispatch)
-            match! Async.Catch comp with
-            | Choice1Of2 _ -> dispatch (Client.Model.Srv_TextDone(None))
-            | Choice2Of2 ex ->
-                printfn "%s" ex.Message
-                dispatch (Client.Model.Srv_TextDone(Some ex.Message))        
+            do! dispatchResponse dispatch data
         }
        
 
@@ -145,11 +111,11 @@ module Vision =
             | VisionRequest req ->
                 try
                     let prompt = fullPrompt req.SystemPrompt req.Prompt
-                    let! resp = infer model prompt req.Image
+                    let! resp = infer model prompt req.Image req.Dispatch
                     req.ReplyChannel.Reply(resp)
                 with ex ->
                     logger.LogError(ex, "Error: %s", ex.Message)
-                    req.ReplyChannel.Reply(asyncSeq { yield ex.Message })
+                    req.ReplyChannel.Reply()
                 return! loop model
             | OnnxModel rc ->
                 rc.Reply(model)
@@ -177,7 +143,7 @@ module Vision =
                         agent.Post msg
                     with ex ->
                         logger.LogError(ex, "Error: %s", ex.Message)
-                        req.ReplyChannel.Reply(asyncSeq { yield ex.Message })
+                        req.ReplyChannel.Reply()
                     return! loop (agents,i)
                 | OnnxModel _ -> failwith "Model request not valid for this router"
                 | Dispose ->
