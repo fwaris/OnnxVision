@@ -46,7 +46,7 @@ let homePage model dispatch =
                         }
                     comp<InputFile> {
                         attr.id "image-file"
-                        attr.accept ".jpeg,.jpg"
+                        attr.accept ".jpeg,.jpg,.png"
                         attr.``class`` "sr-only"
                         attr.disabled (model.isInferring || model.isLoading)
                         attr.callback "OnChange" (fun (e:InputFileChangeEventArgs) -> 
@@ -60,7 +60,7 @@ let homePage model dispatch =
                                     let bytes = ms.ToArray()
                                     dispatch (SetImage (Some bytes))
                                 with ex -> 
-                                    dispatch (Error ex)
+                                    dispatch (Exn ex)
                             }
                             |> Async.Start)
                         } 

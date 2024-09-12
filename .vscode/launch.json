@@ -10,6 +10,29 @@
             "request": "launch",
             "preLaunchTask": "build",
             "launchSettingsFilePath": "${workspaceFolder}/src/OnnxVision.Server/Properties/launchSettings.json",
+            "launchSettingsProfile": "Server",
+            "program": "${workspaceFolder}/src/OnnxVision.Server/bin/Debug/net8.0/OnnxVision.Server.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/OnnxVision.Server",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "WASM Debug",
+            "type": "blazorwasm",
+            "hosted": true,
+            "request": "launch",
+            "preLaunchTask": "build",
+            "launchSettingsFilePath": "${workspaceFolder}/src/OnnxVision.Server/Properties/launchSettings.json",
             "launchSettingsProfile": "https",
             "program": "${workspaceFolder}/src/OnnxVision.Server/bin/Debug/net8.0/OnnxVision.Server.dll",
             "args": [],

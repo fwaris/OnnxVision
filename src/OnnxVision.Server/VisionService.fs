@@ -8,11 +8,15 @@ open System.Text.Json.Serialization
 open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.Logging
+open Microsoft.ML.OnnxRuntimeGenAI
+open FSharp.Control
 open Bolero
 open Bolero.Remoting
 open Bolero.Remoting.Server
 open OnnxVision
-open Microsoft.ML.OnnxRuntimeGenAI
+open Microsoft.Extensions.Hosting
+open System.Threading.Tasks
+//open OnnxVision.Client.Model
 
 type VisionConfig =
     {
@@ -24,12 +28,12 @@ type VisionRequest = {
     SystemPrompt:string
     Prompt:string
     Image:byte[];
-    ReplyChannel:AsyncReplyChannel<string>
+    ReplyChannel:AsyncReplyChannel<AsyncSeq<string>>
 }
 
 type VisionMsg =
     | VisionRequest of VisionRequest
-    | Model of (AsyncReplyChannel<Model>)
+    | OnnxModel of (AsyncReplyChannel<Model>)
     | Dispose
 
 [<AutoOpen>]
@@ -59,16 +63,16 @@ module Vision =
         async {
             let imagePath = Path.GetTempFileName()
             File.WriteAllBytes(imagePath, image)
-            use img = Images.Load(imagePath)
-            use processor = new MultiModalProcessor(model);
-            use tokenizerStream = processor.CreateStream();
-            use inputTensors = processor.ProcessImages(prompt, img)
-            File.Delete(imagePath)
-            use generatorParams = new GeneratorParams(model)
-            generatorParams.SetSearchOption("max_length", 3027)
-            generatorParams.SetInputs(inputTensors)
-            let resp =
-                seq {
+            return
+                asyncSeq {
+                    use img = Images.Load(imagePath)
+                    use processor = new MultiModalProcessor(model);
+                    use tokenizerStream = processor.CreateStream();
+                    use inputTensors = processor.ProcessImages(prompt, img)
+                    File.Delete(imagePath)
+                    use generatorParams = new GeneratorParams(model)
+                    generatorParams.SetSearchOption("max_length", 10000)
+                    generatorParams.SetInputs(inputTensors)
                     use generator = new Generator(model, generatorParams)
                     while not(generator.IsDone()) do
                         generator.ComputeLogits()
@@ -80,11 +84,9 @@ module Vision =
                         printfn "%s" decoded
                         yield decoded
                 }
-                |> String.concat ""
-            return resp
         }
 
-    let infer2 (model:Model) (prompt:string) (image:byte[]) =
+    let infer2 (model:Model) (prompt:string) (image:byte[]) (dispatch:Client.Model.ServerInitiatedMessages -> unit) =
         async {
             let imagePath = Path.GetTempFileName()
             File.WriteAllBytes(imagePath, image)
@@ -96,7 +98,7 @@ module Vision =
             use generatorParams = new GeneratorParams(model)
             generatorParams.SetSearchOption("max_length", 3027)
             generatorParams.SetInputs(inputTensors)
-            let resp =
+            let comp =
                 asyncSeq {
                     use generator = new Generator(model, generatorParams)
                     while not(generator.IsDone()) do
@@ -109,8 +111,30 @@ module Vision =
                         printfn "%s" decoded
                         yield decoded
                 }
-            return resp
+                |> AsyncSeq.bufferByCountAndTime 10 1000
+                |> AsyncSeq.map (fun xs -> if xs.Length > 0 then String.concat "" xs else "")
+                |> AsyncSeq.iter(Client.Model.Srv_TextChunk>>dispatch)
+           match! Async.Catch comp with
+            | Choice1Of2 _ -> dispatch (Client.Model.Srv_TextDone(None))
+            | Choice2Of2 ex ->
+                printfn "%s" ex.Message
+                dispatch (Client.Model.Srv_TextDone(Some ex.Message))        
         }
+
+    let dispatchResponse dispatch (data:AsyncSeq<string>) =
+        async {
+            let comp = 
+                data
+                    |> AsyncSeq.bufferByCountAndTime 10 1000
+                    |> AsyncSeq.map (fun xs -> if xs.Length > 0 then String.concat "" xs else "")
+                    |> AsyncSeq.iter(Client.Model.Srv_TextChunk>>dispatch)
+            match! Async.Catch comp with
+            | Choice1Of2 _ -> dispatch (Client.Model.Srv_TextDone(None))
+            | Choice2Of2 ex ->
+                printfn "%s" ex.Message
+                dispatch (Client.Model.Srv_TextDone(Some ex.Message))        
+        }
+       
 
     ///Processes incoming requests, serialized to a single model instance.
     /// (note number of model instances is configurable in appSettings.json)
@@ -125,9 +149,9 @@ module Vision =
                     req.ReplyChannel.Reply(resp)
                 with ex ->
                     logger.LogError(ex, "Error: %s", ex.Message)
-                    req.ReplyChannel.Reply(ex.Message)
+                    req.ReplyChannel.Reply(asyncSeq { yield ex.Message })
                 return! loop model
-            | Model rc ->
+            | OnnxModel rc ->
                 rc.Reply(model)
                 return! loop model
             | Dispose ->
@@ -153,9 +177,9 @@ module Vision =
                         agent.Post msg
                     with ex ->
                         logger.LogError(ex, "Error: %s", ex.Message)
-                        req.ReplyChannel.Reply(ex.Message)
+                        req.ReplyChannel.Reply(asyncSeq { yield ex.Message })
                     return! loop (agents,i)
-                | Model _ -> failwith "Model request not valid for this router"
+                | OnnxModel _ -> failwith "Model request not valid for this router"
                 | Dispose ->
                     agents |> List.iter (fun a -> a.Post Dispose)
             }
@@ -174,42 +198,26 @@ module Vision =
             router.Post Dispose
             router <- Unchecked.defaultof<_>
 
-type VisionService(ctx: IRemoteContext, env: IWebHostEnvironment, cfg:IConfiguration, logger:ILogger<VisionRequest>) =
-    inherit RemoteHandler<Client.Model.VisionService>()
 
-    let mcfg =
-        {
-            ModelPath = cfg.GetValue<string>("Vision:ModelPath");
-            ModelInstanceCount = cfg.GetValue<int>("Vision:ModelInstanceCount")
-        }
+type VisionConfiguratorService(cfg:IConfiguration, logger:ILogger<VisionRequest>) =
+    interface IHostedService with
+        member this.StartAsync(cancellationToken) =
+            let mcfg =
+                {
+                    ModelPath = cfg.GetValue<string>("Vision:ModelPath");
+                    ModelInstanceCount = cfg.GetValue<int>("Vision:ModelInstanceCount")
+                }
 
-    do Vision.initRouter logger mcfg
+            do Vision.initRouter logger mcfg
 
-    override this.Handler =
-        {
-            infer = fun (sysMsg:string,userPrompt:string,image:byte[]) -> async {
-                try
-                    let! resp = Vision.router.PostAndAsyncReply(fun rc ->
-                            VisionRequest
-                                {
-                                    SystemPrompt=sysMsg
-                                    Prompt=userPrompt
-                                    Image=image
-                                    ReplyChannel=rc
-                                })
-                    return resp
-                with ex ->
-                    logger.LogError(ex, "Error: %s", ex.Message)
-                    return raise ex
-            }
+            Task.CompletedTask
 
-            infer2 = fun (sysMsg:string,userPrompt:string,image:byte[]) -> async {
-                try
-                    let! model = Vision.router.PostAndAsyncReply(fun rc -> Model rc)
-                    let prompt = Vision.fullPrompt sysMsg userPrompt
-                    return! Vision.infer2 model prompt image
-                with ex ->
-                    logger.LogError(ex, "Error: %s", ex.Message)
-                    return raise ex
-            }
-        }
+        member this.StopAsync(cancellationToken) =
+            Vision.disposeRouter()
+            Task.CompletedTask
+
+    interface IDisposable with
+        member this.Dispose() =
+            Vision.disposeRouter()
+            |> ignore
+        

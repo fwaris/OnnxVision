@@ -8,6 +8,7 @@
     <None Include="scripts\TestService.fsx" />
     <Compile Include="VisionService.fs" />
     <Compile Include="Index.fs" />
+    <Compile Include="ServerHub.fs" />
     <Compile Include="Startup.fs" />
   </ItemGroup>
   <ItemGroup>

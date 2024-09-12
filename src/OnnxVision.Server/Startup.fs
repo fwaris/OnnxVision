@@ -21,21 +21,23 @@ type Startup() =
         services.AddMvc() |> ignore
         services.AddServerSideBlazor() |> ignore
         services
+            .AddSignalR(fun o -> o.MaximumReceiveMessageSize <- 5_000_000)
+            .AddJsonProtocol(fun o ->OnnxVision.Client.ClientHub.configureSer o.PayloadSerializerOptions |> ignore) |> ignore
+
+        services
             .AddLogging()
             // .AddHttpLogging(fun o -> 
             //     o.LoggingFields <- HttpLoggingFields.All
             //     o.RequestBodyLogLimit <- 100000
             //     o.ResponseBodyLogLimit <- 100000)
             .AddAuthorization()
-            .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-                .AddCookie()
-                .Services
-            .AddBoleroRemoting<VisionService>()
             .AddBoleroHost()
 #if DEBUG
             .AddHotReload(templateDir = __SOURCE_DIRECTORY__ + "/../OnnxVision.Client")
 #endif
         |> ignore
+
+        services.AddHostedService<VisionConfiguratorService>() |> ignore
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
     member this.Configure(app: IApplicationBuilder, env: IWebHostEnvironment) =
@@ -55,17 +57,20 @@ type Startup() =
 #endif
                 endpoints.MapBoleroRemoting() |> ignore
                 endpoints.MapBlazorHub() |> ignore
+                endpoints.MapHub<ServerHub>(OnnxVision.Client.ClientHub.HubPath) |> ignore
                 endpoints.MapFallbackToBolero(Index.page) |> ignore)     
         |> ignore
+
 
 module Program =
 
     [<EntryPoint>]
     let main args =
-        WebHost
-            .CreateDefaultBuilder(args)            
-            .UseStaticWebAssets()
-            .UseStartup<Startup>()
-            .Build()
-            .Run()
+        let app = 
+                WebHost
+                    .CreateDefaultBuilder(args)            
+                    .UseStaticWebAssets()
+                    .UseStartup<Startup>()
+                    .Build()
+        app.Run()
         0

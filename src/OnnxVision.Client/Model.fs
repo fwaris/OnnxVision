@@ -1,4 +1,4 @@
-module OnnxVision.Client.Model
+module rec OnnxVision.Client.Model
 
 open System
 open Elmish
@@ -45,25 +45,26 @@ let initModel =
         fileName = None
     }
 
-/// Remote service definition.
-type VisionService =
-    {
-        infer: string*string*byte[] -> Async<string> //system message, user prompt, image -> response
-        infer2: string*string*byte[] -> Async<AsyncSeq<string>> //system message, user prompt, image -> response
-    }
-    interface IRemoteService with
-        member this.BasePath = "/vision"
-
 
 /// The Elmish application's update messages.
 type Message =
     | SetPage of Page
-    | SetResponse of string option
     | SetPrompt of string option
     | SetImage of byte[] option
     | SetSystemMessage of string option
     | Infer
-    | Error of exn
+    | Exn of exn
+    | Error of string
+    | Notify of string
     | ClearError
     | Loading of string
+    | FromServer of ServerInitiatedMessages
 
+type ClientInitiatedMessages =
+    | Clnt_InferImage of string*string*byte[]
+
+type ServerInitiatedMessages =
+    | Srv_Notify of string
+    | Srv_Error of string
+    | Srv_TextChunk of string
+    | Srv_TextDone of string option
