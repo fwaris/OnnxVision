@@ -9,3 +9,7 @@ let userPrompt = "Describe the image in detail"
 
 let response = Client.processImage url (systemMessage, userPrompt, img) |> Async.RunSynchronously
 
+open System
+let duration = TimeSpan(1, 12, 24, 2)
+let formatted = duration.ToString(@"dd\.hh\:mm\:ss")
+printfn "Formatted TimeSpan: %s" formatted

@@ -9,6 +9,7 @@ open System.IO
 let router = Router.infer SetPage (fun model -> model.page)
 
 let homePage model dispatch =
+    let inferTimeStr = (model.endInferTime - model.startInferTime).ToString(@"mm\:ss")
     div {
         attr.``class`` "content"
 
@@ -77,8 +78,12 @@ let homePage model dispatch =
         }
         div {
             span {
-                "Infer time (sec): "
-                $"{(model.endInferTime - model.startInferTime).TotalSeconds}"
+                "Infer time (min:sec): "
+                text <| 
+                    if model.isInferring then 
+                        "---" 
+                    else 
+                        inferTimeStr
             }
         }
     }
