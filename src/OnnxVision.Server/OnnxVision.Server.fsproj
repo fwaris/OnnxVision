@@ -5,6 +5,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Include="AsyncExt.fs" />
+		<None Include="scripts\OcrTest.fsx" />
 		<None Include="scripts\TestService.fsx" />
 		<Compile Include="VisionService.fs" />
 		<Compile Include="Index.fs" />
