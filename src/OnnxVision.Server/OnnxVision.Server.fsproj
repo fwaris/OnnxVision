@@ -5,7 +5,8 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Include="AsyncExt.fs" />
-		<None Include="scripts\OcrTest.fsx" />
+		<None Include="scripts\Client.fsx" />
+		<None Include="scripts\TestBatch.fsx" />
 		<None Include="scripts\TestService.fsx" />
 		<Compile Include="VisionService.fs" />
 		<Compile Include="Index.fs" />
@@ -20,8 +21,8 @@
 		<PackageReference Include="Bolero.HotReload.Server" Version="0.*" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.8" />
 		<PackageReference Include="NtvLibs.zlib.zlibwapi.runtime.win-x64" Version="1.2.3" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI.Cuda" Version="0.4.0" />
-		<!--<PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI" Version="0.4.0" />-->
+		<!--<PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI.Cuda" Version="0.4.0" />-->
+		<PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI" Version="0.4.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Update="FSharp.Core" Version="8.0.400" />
