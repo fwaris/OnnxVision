@@ -11,6 +11,8 @@ open Avalonia.Threading
 
 #nowarn "57"
 open Avalonia.Media
+open Avalonia.Controls.Primitives
+open System.Threading
 
 [<AbstractClass; Sealed>]
 type Views =
@@ -18,9 +20,11 @@ type Views =
     static member main (window:Window)  =
         Component (fun ctx ->
             let llmResponse = ctx.useState ("")
-            let llmPrompt = ctx.useState ("")
+            let llmPrompt = ctx.useState ("Extract all phone numbers and associated entities (person, company, etc.) from the following text: ")
             let userInput = ctx.useState ("")
-            let inputFile = ctx.useState ("")
+            let maxOutputTokens = ctx.useState (500)
+            let inputTokens = ctx.useState (0)
+            let canelToken : IWritable<CancellationTokenSource> = ctx.useState (null)
             let log = ctx.useState ("")
 
             let clearLog () =
@@ -31,18 +35,37 @@ type Views =
                 Dispatcher.UIThread.InvokeAsync(fun _ -> log.Set $"{msg}\n{log.Current}")
                 |> ignore
 
+            let setInput (msg:string) =
+                Dispatcher.UIThread.InvokeAsync(fun _ -> userInput.Set msg)
+                |> ignore
+
+            let clearOutput() =
+                Dispatcher.UIThread.InvokeAsync(fun _ -> llmResponse.Set "")
+                |> ignore
+
+            let appendToken (msg:string) =
+                Dispatcher.UIThread.InvokeAsync(fun _ -> llmResponse.Set (llmResponse.Current + msg))
+                |> ignore
+
+            let setInputTokens (tokens:int) =
+                Dispatcher.UIThread.InvokeAsync(fun _ -> inputTokens.Set tokens)
+                |> ignore
+
+            ctx.useEffect (
+                    (fun _ -> Toolbars.estimateTokens LLM.systemMessage userInput llmPrompt setInputTokens appendLog ),
+                    [EffectTrigger.AfterChange userInput; EffectTrigger.AfterChange llmPrompt; EffectTrigger.AfterInit])
+
             let gridCellView col row (store:IWritable<string>) =
                 Border.create [
                     Grid.column col
                     Grid.row row
-                    Border.background Media.Colors.AliceBlue
                     Border.borderThickness 2
                     Border.borderBrush (Media.Colors.Black.ToString())
                     Border.margin(2., 2., 2., 2.)
                     Border.child (
                         TextBlock.create [
                             TextBlock.dock Dock.Top
-                            TextBlock.fontSize 48.0
+                            TextBlock.fontSize 12.0
                             TextBlock.verticalAlignment VerticalAlignment.Center
                             TextBlock.horizontalAlignment HorizontalAlignment.Center
                             TextBlock.text store.Current
@@ -66,9 +89,11 @@ type Views =
                                 StackPanel.create [
                                     StackPanel.orientation Orientation.Horizontal
                                     StackPanel.horizontalAlignment HorizontalAlignment.Stretch
+                                    StackPanel.clipToBounds true
                                     StackPanel.children [
                                         TextBlock.create [
                                             TextBlock.text label
+                                            TextBlock.textDecorations TextDecorations.Underline
                                             TextBlock.horizontalAlignment HorizontalAlignment.Left
                                             TextBlock.verticalAlignment VerticalAlignment.Center
                                             TextBlock.margin(1., 1., 3., 1.)
@@ -83,7 +108,10 @@ type Views =
                                     TextBox.multiline true
                                     TextBox.verticalAlignment VerticalAlignment.Stretch
                                     TextBox.horizontalAlignment HorizontalAlignment.Stretch
+                                    TextBox.textAlignment TextAlignment.Left
+                                    TextBox.textWrapping TextWrapping.Wrap
                                     TextBox.text store.Current
+                                    TextBox.onTextChanged (fun e -> store.Set e)
                                 ]
                             ]
                         ]
@@ -116,14 +144,9 @@ type Views =
                                     TextBlock.textWrapping TextWrapping.Wrap
                                     TextBlock.verticalAlignment VerticalAlignment.Stretch
                                     TextBlock.horizontalAlignment HorizontalAlignment.Stretch
+                                    TextBlock.verticalScrollBarVisibility ScrollBarVisibility.Auto
                                     TextBlock.text log.Current
                                 ]
-                                // ListBox.create [
-                                //     Grid.row 1
-                                //     ListBox.verticalAlignment VerticalAlignment.Stretch
-                                //     ListBox.horizontalAlignment HorizontalAlignment.Stretch
-                                //     ListBox.dataItems log.Current
-                                // ]
                             ]
                         ]
                     )
@@ -136,9 +159,10 @@ type Views =
                     Grid.showGridLines true
                     Grid.margin (5., 5., 5., 5.)
                     Grid.children [
-                        gridCellViewText 0 0 userInput "User Input" (OcrTools.inputTools window.StorageProvider userInput clearLog appendLog)
-                        gridCellViewText 0 1 llmPrompt "LLM Prompt" (Button.create [Button.content "Run"])
-                        gridCellView 0 2 llmResponse
+                        gridCellViewText 0 0 llmPrompt "LLM Prompt" (Toolbars.llmTools canelToken userInput llmPrompt inputTokens maxOutputTokens appendToken clearOutput clearLog appendLog)
+                        gridCellViewText 0 1 userInput "User Input" (Toolbars.inputTools window.StorageProvider setInput clearLog appendLog)
+                        //gridCellView 0 2 llmResponse
+                        gridCellViewText 0 2 llmResponse "Response" (StackPanel.create [])
                         GridSplitter.create [
                             Grid.row 1
                             Grid.horizontalAlignment HorizontalAlignment.Stretch
