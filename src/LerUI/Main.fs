@@ -17,19 +17,19 @@ type Views =
 
     static member main (window:Window)  =
         Component (fun ctx ->
-            let grid = ref Unchecked.defaultof<DataGrid>
             let llmResponse = ctx.useState ("")
             let llmPrompt = ctx.useState ("")
             let userInput = ctx.useState ("")
-            let ocrFile = ctx.useState ("")
             let inputFile = ctx.useState ("")
             let log = ctx.useState ("")
 
-            ctx.useEffect ((fun _ -> ctx.forceRender()), [EffectTrigger.AfterChange log])
+            let clearLog () =
+                Dispatcher.UIThread.InvokeAsync (fun _ -> log.Set "")
+                |> ignore
 
-            let clearLog () = log.Set ""
-
-            let appendLog (msg:string) = log.Set $"{msg}\n{log.Current}"
+            let appendLog (msg:string) =
+                Dispatcher.UIThread.InvokeAsync(fun _ -> log.Set $"{msg}\n{log.Current}")
+                |> ignore
 
             let gridCellView col row (store:IWritable<string>) =
                 Border.create [
@@ -113,7 +113,6 @@ type Views =
                                 TextBlock.create [
                                     TextBlock.row 1
                                     TextBlock.fontSize 12.0
-                                    TextBlock.text log.Current
                                     TextBlock.textWrapping TextWrapping.Wrap
                                     TextBlock.verticalAlignment VerticalAlignment.Stretch
                                     TextBlock.horizontalAlignment HorizontalAlignment.Stretch
@@ -137,7 +136,7 @@ type Views =
                     Grid.showGridLines true
                     Grid.margin (5., 5., 5., 5.)
                     Grid.children [
-                        gridCellViewText 0 0 userInput "User Input" (OcrTools.inputTools window.StorageProvider ocrFile userInput clearLog appendLog)
+                        gridCellViewText 0 0 userInput "User Input" (OcrTools.inputTools window.StorageProvider userInput clearLog appendLog)
                         gridCellViewText 0 1 llmPrompt "LLM Prompt" (Button.create [Button.content "Run"])
                         gridCellView 0 2 llmResponse
                         GridSplitter.create [

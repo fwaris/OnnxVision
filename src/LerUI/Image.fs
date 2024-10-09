@@ -33,20 +33,22 @@ module Conversion =
     ///Export entire pages as jpeg images to disk
     ///Image file paths are <input path>_{page#}_0.jpeg
     let exportImagesToDisk (backgroundRGB:(byte*byte*byte) option) (path:string) =
-        use inst = Docnet.Core.DocLib.Instance
-        use reader = inst.GetDocReader(path,Docnet.Core.Models.PageDimensions(1.0))
-        [0 .. reader.GetPageCount()-1]
-        |> List.iter (fun i ->
-            use page = reader.GetPageReader(i)
-            let imgBytes =
-                match backgroundRGB with
-                | Some (red,green,blue) ->  page.GetImage(new Docnet.Core.Converters.NaiveTransparencyRemover(red,blue,green))
-                | None                  ->  page.GetImage()
-            let w,h = page.GetPageWidth(),page.GetPageHeight()
-            use bmp = new Bitmap(w,h,PixelFormat.Format32bppArgb)
-            addBytes bmp imgBytes
-            let outPath = Image.imagePath path i 0
-            saveBmp bmp outPath)
+        async {
+            use inst = Docnet.Core.DocLib.Instance
+            use reader = inst.GetDocReader(path,Docnet.Core.Models.PageDimensions(1.0))
+            for i in [0 .. reader.GetPageCount()-1] do
+                do! Async.Sleep 100
+                use page = reader.GetPageReader(i)
+                let imgBytes =
+                    match backgroundRGB with
+                    | Some (red,green,blue) ->  page.GetImage(new Docnet.Core.Converters.NaiveTransparencyRemover(red,blue,green))
+                    | None                  ->  page.GetImage()
+                let w,h = page.GetPageWidth(),page.GetPageHeight()
+                use bmp = new Bitmap(w,h,PixelFormat.Format32bppArgb)
+                addBytes bmp imgBytes
+                let outPath = Image.imagePath path i 0
+                saveBmp bmp outPath
+        }
 
     ///Export entire pages as jpeg images to disk
     ///Image file paths are <input path>_{page#}_0.jpeg

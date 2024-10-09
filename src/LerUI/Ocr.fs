@@ -10,12 +10,14 @@ open TesseractOCR.Pix
 module OCR =
     let trainData = @"C:\s\legal"
 
-    let processImage (imagePath:string) appendLog =
-        use engine = new Engine(trainData, Language.English, EngineMode.Default)
-        use img = Pix.Image.LoadFromFile(imagePath)
-        use page = engine.Process(img)
-        appendLog $"{Path.GetFileName(imagePath)}, confidence: {page.MeanConfidence}"
-        let text = page.Text
-        let pout = imagePath + ".0_1.txt"
-        File.WriteAllText(pout,text)
+    let processImage (i:int) (imagePath:string) appendLog =
+        async {
+            use engine = new Engine(trainData, Language.English, EngineMode.Default)
+            use img = Pix.Image.LoadFromFile(imagePath)
+            use page = engine.Process(img)
+            appendLog $"img-to-text page {i}, confidence: {page.MeanConfidence}"
+            let text = page.Text
+            let pout = imagePath + ".0_1.txt"
+            File.WriteAllText(pout,text)
+        }
 

@@ -11,8 +11,6 @@ module Dialogs =
         let options = FilePickerOpenOptions(AllowMultiple = false, Title = title, FileTypeFilter = filters)
 
         async {
-            let! musicFolder = provider.TryGetWellKnownFolderAsync Platform.Storage.WellKnownFolder.Music |> Async.AwaitTask
-            options.SuggestedStartLocation <- musicFolder
 
             return!
                 Dispatcher.UIThread.InvokeAsync<IReadOnlyList<IStorageFile>>
