@@ -6,6 +6,7 @@ open System.Text.Json
 open System.Text.Json.Serialization
 open Microsoft.ML.OnnxRuntimeGenAI
 open FSharp.Control
+open Microsoft.SemanticKernel
 
 [<AutoOpen>]
 module LLMInit =
@@ -13,7 +14,7 @@ module LLMInit =
     do
         let p = System.Reflection.Assembly.GetExecutingAssembly().Location
         let p = Path.GetDirectoryName(p)
-        //prob need .so for linux
+        //**** prob need .so for linux or .dylib for mac? ******
         let p = $@"{p}/runtimes/{RuntimeInformation.RuntimeIdentifier}/native/zlibwapi.dll"
         if not(File.Exists(p)) then
             failwith $"zlibwaip.dll not found at {p}"
@@ -21,10 +22,9 @@ module LLMInit =
             let _ = NativeLibrary.Load(p)
             ()
 
-
 module LLM =
     open Microsoft.DeepDev
-    let model = lazy(new Model(@"C:\s\models\Phi-3.5-mini-instruct-onnx\cpu_and_mobile\cpu-int4-awq-block-128-acc-level-4"))
+    let model = lazy(new Model(Env.modelPath()))
 
     let fullPrompt systemMessage userPrompt =
         if systemMessage = "" then
@@ -60,3 +60,26 @@ module LLM =
         }
 
     let systemMessage = ""
+
+    let kernelArgsDefault (args:(string*string) seq) =
+        let kargs = KernelArguments()
+        for (k,v) in args do
+            kargs.Add(k,v)
+        kargs
+
+    let renderPrompt (prompt:string) (args:KernelArguments) =
+        task {
+            let k = Kernel.CreateBuilder().Build()
+            let fac = KernelPromptTemplateFactory()
+            let cfg = PromptTemplateConfig(template = prompt)
+            let pt = fac.Create(cfg)
+            let! rslt = pt.RenderAsync(k,args) |> Async.AwaitTask
+            return rslt
+        }
+
+    let applyTemplate userInput llmPrompt =
+        try
+            let args = kernelArgsDefault ["text", userInput]
+            (renderPrompt llmPrompt args).Result
+        with ex ->
+            llmPrompt + " " + userInput

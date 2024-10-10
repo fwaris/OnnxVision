@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Env.fs" />
     <Compile Include="Image.fs" />
     <Compile Include="Ocr.fs" />
     <Compile Include="LLM.fs" />

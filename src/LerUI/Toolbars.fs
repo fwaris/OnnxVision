@@ -73,6 +73,10 @@ module Toolbars =
                 appendLog $"Error: {ex.Message}"
         }
 
+    let createPrompt (userInput:IWritable<string>) (llmPrompt:IWritable<string>) =
+        let userPrompt = LLM.applyTemplate userInput.Current llmPrompt.Current
+        LLM.fullPrompt LLM.systemMessage userPrompt
+
     let generate (cts:IWritable<CancellationTokenSource>) (userInput:IWritable<string>) (llmPrompt:IWritable<string>) maxLength appendToken clearOutput clearLog appendLog =
         cts.Set (new CancellationTokenSource())
         let comp =
@@ -81,8 +85,7 @@ module Toolbars =
                 clearLog()
                 clearOutput()
                 appendLog "Running..."
-                let userPrompt = userInput.Current  + llmPrompt.Current
-                let p = LLM.fullPrompt LLM.systemMessage userPrompt
+                let p = createPrompt userInput llmPrompt
                 if String.IsNullOrWhiteSpace p then
                     appendLog "No prompt provided"
                 else
@@ -98,8 +101,7 @@ module Toolbars =
     let estimateTokens systemMessage (userInput:IWritable<string>) (llmPrompt:IWritable<string>) setInputTokens appendLog =
         async {
             do! loadModel appendLog
-            let userPrompt = llmPrompt.Current + userInput.Current
-            let p = LLM.fullPrompt systemMessage userPrompt
+            let p = createPrompt userInput llmPrompt
             let! tokens = LLM.estimateTokens p
             let tokens = tokens * 1.5 |> int // 50% buffer as true token count is unknown
             setInputTokens tokens

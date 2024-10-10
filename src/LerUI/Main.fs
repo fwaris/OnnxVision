@@ -20,7 +20,7 @@ type Views =
     static member main (window:Window)  =
         Component (fun ctx ->
             let llmResponse = ctx.useState ("")
-            let llmPrompt = ctx.useState ("Extract all phone numbers and associated entities (person, company, etc.) from the following text: ")
+            let llmPrompt = ctx.useState ("Extract the main request for T-Mobile given the legal subpoena below:\n ```{{$text}}```")
             let userInput = ctx.useState ("")
             let maxOutputTokens = ctx.useState (500)
             let inputTokens = ctx.useState (0)
@@ -73,7 +73,7 @@ type Views =
                     )
                 ]
 
-            let gridCellViewText col row (store:IWritable<string>) label (toolbar:Types.IView)=
+            let gridCellViewText col row (store:IWritable<string>) label (toolbar:Types.IView) autoScroll =
                 Border.create [
                     Grid.column col
                     Grid.row row
@@ -106,11 +106,13 @@ type Views =
                                     TextBox.dock Dock.Top
                                     TextBox.fontSize 12.0
                                     TextBox.multiline true
+                                    TextBox.acceptsReturn true
                                     TextBox.verticalAlignment VerticalAlignment.Stretch
                                     TextBox.horizontalAlignment HorizontalAlignment.Stretch
                                     TextBox.textAlignment TextAlignment.Left
                                     TextBox.textWrapping TextWrapping.Wrap
                                     TextBox.text store.Current
+                                    if autoScroll then TextBox.caretIndex (store.Current.Length)
                                     TextBox.onTextChanged (fun e -> store.Set e)
                                 ]
                             ]
@@ -159,10 +161,10 @@ type Views =
                     Grid.showGridLines true
                     Grid.margin (5., 5., 5., 5.)
                     Grid.children [
-                        gridCellViewText 0 0 llmPrompt "LLM Prompt" (Toolbars.llmTools canelToken userInput llmPrompt inputTokens maxOutputTokens appendToken clearOutput clearLog appendLog)
-                        gridCellViewText 0 1 userInput "User Input" (Toolbars.inputTools window.StorageProvider setInput clearLog appendLog)
+                        gridCellViewText 0 0 llmPrompt "LLM Prompt" (Toolbars.llmTools canelToken userInput llmPrompt inputTokens maxOutputTokens appendToken clearOutput clearLog appendLog) false
+                        gridCellViewText 0 1 userInput "User Input" (Toolbars.inputTools window.StorageProvider setInput clearLog appendLog) false
                         //gridCellView 0 2 llmResponse
-                        gridCellViewText 0 2 llmResponse "Response" (StackPanel.create [])
+                        gridCellViewText 0 2 llmResponse "Response" (StackPanel.create []) true
                         GridSplitter.create [
                             Grid.row 1
                             Grid.horizontalAlignment HorizontalAlignment.Stretch
@@ -182,7 +184,7 @@ type Views =
             DockPanel.create [
                 DockPanel.children [
                     Grid.create [
-                        Grid.columnDefinitions "1*,1*"
+                        Grid.columnDefinitions "2*,1*"
                         Grid.children [
                             opsView
                             logView 1
